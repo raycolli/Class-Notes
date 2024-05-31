@@ -1,0 +1,120 @@
+GENERAL TIPS:
+> DITCH THIS IDEA IMMEDIATELY: if you are wanting to use (x,y) where x is width and y is height, DONT
+> it is important to know that top left is (row=0,col=0) and increase in rows will increment downward
+  and increase in cols is rightward. visual example:
+			
+		0,0      .        .        .   0,CMAX
+            	.        .        .        .     .
+            	.        .        .        .     .
+            	.        .        .        .     .
+       	      RMAX,0     .        .        .  RMAX, CMAX
+
+> essentially it is opposite of the traditional (x,y) thinking. please dispose of this idea asap.
+  only think of image pixel indices as (r,c). it is imperative. it will save a lot of headache.
+
+-----------------------------------------------------------------------------------------------------
+ASSIGNMENT 0 FLIP AND CHROMAKEY:
+> Easiest. Introduces you into idea that images are simply 2D matrices. Mainly testing ability to
+  follow instructions and make sure you set up your homework environment with python, github, and 
+  jenkins. I'll include a txt file explaining set up.
+-----------------------------------------------------------------------------------------------------
+ASSIGNMENT 1 ROTATION AND INTERPOLATION:
+> Quite the step up in difficulty but not intense. Taking an image, copy it, rotate it, and rerotate.
+> When rotating, calculate rotation with formula, but make sure to round or truncate after so that
+  you have a valid pixel index. keep your rounding method consistent.
+> The difficulty here is upon rotation, the coordinates for the rotated image need to change. Pre-
+  rotation, top left corner is (row=0,col=0), but when you rotate it CCW you will now have negative
+  coordinates, which is allowed in python. So anything pixel that would be rotated past row=0, would
+  be pushed to the bottom. You need to handle this by readjusting coordinate system, and readjust the
+  bounds for your rotated image. 
+> DITCH THIS IDEA IMMEDIATELY. if you are wanting to use (x,y) where x is width and y is height, DONT
+> it is important to know that top left is (row=0,col=0) and increase in rows will increment downward
+  and increase in cols is rightward. visual example:
+			
+		0,0      .        .        .   0,CMAX
+            	.        .        .        .     .
+            	.        .        .        .     .
+            	.        .        .        .     .
+       	      RMAX,0     .        .        .  RMAX, CMAX
+
+
+>> imagine the image is in Q4 and use this diagram for visual and recall the unit circle:
+			         -rmax
+			            |
+			        II  |  I
+			-cmax ------+------- +cmax
+			        III |  IV
+			            |
+			          +rmax
+>> You also need to handle this coord syst and bounds readjustment caused by rotation for every case.
+   e.g. when rotation causes negative rows, negative columns, and when an increase in +rmax or +cmax
+   is necessary. For me thinking about theta helped me isolate each case. for instance, what does
+   theta = pi/4 generate? well it generates negative rows, and calls for an increase in cmax.
+   Think thru the unit circle and handle each case.
+
+>> Rerotating is essentially undoing the rotation. but since we different bounds, make sure to 
+   restrict your loop logic so that you the # of iterations match the # of pixels in the original 
+   image. Think about it.
+
+>>> after each rotation you'll notice the quality of image deteriorates as since we are rounding         pixels, there will be black spots where a pixel wasn't copied due to rounding. Once reverse rotated     it should be very obvious. This is intended as in the last part of assignment we use two methods:       1) bilinear interpolation 2) nearest neighbor to handle this.
+
+>>> nearest neighbor is simpler out of the two. give the missing pixel the value of the nearest pixel
+
+>>> linear interpolation is essentially estimating the missing pixel using the weighted average of the      nearest pixel values with the weights being distance to missing pixel.
+>>> bilinear interpolation uses linear interpolation in two dimensions. This requires four "valid"         pixels. Estimate the value in the row direction of the top two pixels. Then estimate the value
+    in the row direction of the bottom two pixels. With these estimated values, then estimate the 
+    goal pixel in the column direction. existing pixel VALUES are Q, result of first two linearly     interpolated pixel VALUES are R, and goal pixel VALUE P is result of linear interpolation between R     pixel VALUES.
+
+      ----C1----------------------------C2-- COLUMN
+      |	  |				|
+ Row 1|  Q11-------R1----------------- Q21
+      |   |        |                    |
+      |   |        |                    |
+      |   |        P                    |
+      |   |        |                    |
+      |   |        |                    |
+ Row 2|  Q12-------R2----------------- Q22
+      |
+     ROW
+>>> Do this for any black (missing) pixels that resulted from rotation. This gives a better estimation     for missing pixels compared to nearest neighbor.
+-----------------------------------------------------------------------------------------------------
+ASSIGNMENT 2 THRESHOLDING AND BLOB COLORING
+> This assignment took the most time. Not the most difficult conceptually. But blob coloring was a pain
+> creating histogram is straightforward. create array of zeros the size of range of grayscale pixel   values. aka hist = [0] * 256. then iterate thru each pixel in your image and increment the   appropriate index. i.e. use the pixel value as the index and add 1 to that value. 
+  i.e. hist[image[i][j]] += 1
+>> thresholding is not hard besides understanding variance SPECIFICALLY FOR HISTOGRAMS. A HUGE HINT: 
+   know when you want to use: 
+   	for k in range(blahblahblah): blah += hist[k]
+		vs
+   	for k in range(blahblahblah): blah += (k * hist[k])
+   think thru this and you'll understand the difference.
+>> once you get otsu's thresholding (threshold found that minimizes intraclass variance) use the "best    threshold" to binarize the grayscale image. i.e. pixels below threshold -> black pixel. pixel above    -> white pixel
+>>> BLOB COLORING was hardest to grasp as a lot of cases needed to be handled. and some cases are not     intuitive. First we have the binary image, then we need another 2D array that can store Region     numbers or blob numbers. this 2D array is the same size as our binary image and its values     essentially "map" to the values of our binary image. In other words if Region_Map[2][40] = 4 then     the pixel: B_I[2][40] belongs to the blob 4.
+>>> Additionally, once you assign a value in Region_Map, append the pixel from B_I to a dictionary     called regions. "regions" will keep track of all pixels from the original, binary image as a value,     and the key would be the 'number' of the blob.
+>>> Essentially you have to detect "blobs" which in our case are white pixels that are grouped together     and assign these blobs a number. We need to detect these blobs by iterating thru each pixel,         comparing pixel above and pixel to the left, and whatever case you encounter (e.g. top is same as       current but left is different) you assign that pixel a blob number that is a counter. This counter      is only incremented when a white pixel is encountered but the top and left pixel are still black.       However, there are tons of cases that you need to "correct" any erronous increments. (e.g. if the       top, left, and current pixels are all white, but the top and left pixels have different blob         numbers. this means that we incorrectly incremented our blob counter and need to correct all pixels     that have that incorrect number and assign the correct one to every single appropriate pixel.
+>>> BLOB COLORING as you can tell requires a ton of time for debugging. I suggest learning how to use       PyCharm's debugger as it can show you visually the region numbers in each cell.
+
+>>> REMEMBER. TRIAL AND ERROR FOR BLOB NUMBER ASSIGNMENTS. LOTS OF CASES TO CONSIDER. THE LECTURE     SLIDES THIS TIME ONLY PROVIDE A *STARTING POINT* FOR CASE MANAGEMENT AND REQUIRE A LOT OF ADDITIONS
+-----------------------------------------------------------------------------------------------------
+ASSIGNMENT 3 DFT AND FILTERING
+> This assignment was my favorite. Objective wise its pretty straight forward. Conceptually, it can be tough if you are weak in   calculus so pay   attention during lecture and ask as many stupid questions as you need.
+> This assignment briefing will assume you understand DFT and IDFT, spatial and frequency filtering   concepts.
+> We have an image with periodic noise and want to remove it. 
+> First part tests your Discrete Fourier Transform and its inverse comprehension. In other words, without any library functions create these transforms. This should be easy.
+>> Second part is spatial filtering. Add appropriate zero padding and copy image into appropriate indices. Once this is done we will create two filters. 1) 5x5 Gaussian and 2) 3x3 Laplacian.
+>> Once this is done perform 2D convolution with the filter on the image. This will smooth (gaussian) or sharpen (laplacian) the image.
+>>> Third part is frequency filtering. Here we are allowed to use library functions like fft (forward fourier transform) and ifft (inverse) as the comprehension was tested in part one. Essentially, we will create a shifted DFT (you should know what this is) from the input image. Since it's shifted certain frequencies will be shown. Look for any "pockets" of white that look like outliers nearish to the center. These outliers are the perodic noise. 
+>>> once the periodic noise on the shifted DFT is located. THROUGH TRIAL AND ERROR (can plot using matplotlib.pyplot to get coordinates) you will create a "mask", in other words just areas of black pixels, that will be used to be overlayed on top of the shifted DFT.
+>>> once the mask is applied to the shifted DFT (all outliers have been "masked over" with black pockets, we will perform an inverse DFT or IDFT on this masked image. This should generate our original image but with perodic noise removed.
+>>> recheck requirements as I believe the assignment asks for some additional metrics like the magnitude of dft for example. Make sure all requirements and deliverables are met.
+-----------------------------------------------------------------------------------------------------
+ASSIGNMENT 4 IMAGE RESTORATION
+> This assignment was my second favorite. Essentially we focus on spatial filtering. In my opinion this assignment is easier than the previous. This has nothing to do with DFT's so if you hated those, rejoice.
+> Here we have an input image and we want to apply different filters to deal with noise.
+> We will zero pad our image appropriately based on the size of our filter. Once the filter is overlayed on the zero padded image, the area on the pre-filtered image will be called the Region of Interest, or ROI.
+> The different filters we will use is the Arithmetic Mean, Geometric Mean, Local Noise Reduction, Median, and Adaptive Median.
+> We have to construct the logic for each of these filters. These were discussed in class.
+> Simply perform the convolution of the filter on the entire zero padded input image. 
+> Through the command line we will manipulate the size of the filter, designate which filter to use, etc etc.
+> Pretty simple assignment. Adaptive Mean was the hardest as it required reconstructing a new ROI based on the previous convolution. I used recursion as the lecture slides indicated certain cases that could be used as base cases.
+-----------------------------------------------------------------------------------------------------
